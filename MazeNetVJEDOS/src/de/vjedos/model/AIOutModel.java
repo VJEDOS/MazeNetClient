@@ -7,5 +7,9 @@ package de.vjedos.model;
  */
 public class AIOutModel 
 {
-	
+	public int card_row;
+	public int card_column;
+	public int player_row;
+	public int player_column;
+	public CardType shiftCard;
 }

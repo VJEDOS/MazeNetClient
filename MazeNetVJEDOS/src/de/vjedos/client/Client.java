@@ -6,12 +6,16 @@ import java.util.List;
 
 import javax.xml.bind.*;
 
+import de.vjedos.ai.AI;
 import de.vjedos.config.Settings;
+import de.vjedos.model.AIOutModel;
 import de.vjedos.model.BoardType;
 import de.vjedos.model.LoginMessageType;
 import de.vjedos.model.MazeCom;
 import de.vjedos.model.MazeComType;
+import de.vjedos.model.MoveMessageType;
 import de.vjedos.model.ObjectFactory;
+import de.vjedos.model.PositionType;
 import de.vjedos.model.TreasureType;
 import de.vjedos.model.TreasuresToGoType;
 import de.vjedos.networking.*;
@@ -21,8 +25,8 @@ public class Client
 	 Socket socket;
 	 DataOutputStream outstream;
 	 DataInputStream instream;
-	 UTFOutputStream utf_outstream;
-	 UTFInputStream utf_instream;
+	 UTFOutputStream utfOutputStream;
+	 UTFInputStream utfInputStream;
 	 ObjectFactory objectFactory;
 	 JAXBContext context;
 	 Marshaller marshaller;
@@ -35,9 +39,9 @@ public class Client
 	 MazeCom in_message;
 	 
 	 BoardType board;
-	 List<TreasureType> found; //those treasures already found
-	 TreasureType treasure; //no idea
-	 List<TreasuresToGoType> treasuresToGo;
+	 List<TreasureType> found; //gefundene Schätze
+	 TreasureType treasure; //aktueller Schatz
+	 List<TreasuresToGoType> treasuresToGo; // noch zu findende
 	 
 	 int id;
 	
@@ -46,8 +50,8 @@ public class Client
 		socket = s;
 		outstream = new DataOutputStream(socket.getOutputStream());
 		instream = new DataInputStream(socket.getInputStream());
-		utf_outstream = new UTFOutputStream(outstream);
-		utf_instream = new UTFInputStream(instream);
+		utfOutputStream = new UTFOutputStream(outstream);
+		utfInputStream = new UTFInputStream(instream);
 		
 		objectFactory = new ObjectFactory();
 		context = JAXBContext.newInstance(MazeCom.class);
@@ -74,10 +78,10 @@ public class Client
 			// Marshalling
 			marshaller.marshal(out_message, byteOutStream);
 			out_string = new String(byteOutStream.toByteArray());
-			utf_outstream.writeUTF8(out_string);
+			utfOutputStream.writeUTF8(out_string);
 			
 			// Unmarshal Reply
-			in_string = utf_instream.readUTF8();
+			in_string = utfInputStream.readUTF8();
 			byteInStream = new ByteArrayInputStream(in_string.getBytes());
 			in_message = (MazeCom) unmarshaller.unmarshal(byteInStream);
 			
@@ -118,7 +122,7 @@ public class Client
 	{
 		while(true)
 		{
-			in_string = utf_instream.readUTF8();
+			in_string = utfInputStream.readUTF8();
 			byteInStream = new ByteArrayInputStream(in_string.getBytes());
 			in_message = (MazeCom) unmarshaller.unmarshal(byteInStream);
 			
@@ -129,6 +133,7 @@ public class Client
 					found = in_message.getAwaitMoveMessage().getFoundTreasures();
 					treasure = in_message.getAwaitMoveMessage().getTreasure();
 					treasuresToGo = in_message.getAwaitMoveMessage().getTreasuresToGo();
+					move();
 					break;
 					
 				case WIN:
@@ -143,15 +148,12 @@ public class Client
 					}
 					break;
 				case ACCEPT:
-					//whether or not our move is acceptable
 					if (!in_message.getAcceptMessage().isAccept()) 
 					{
 						move();
 					}
 					break;
-					
 				case DISCONNECT:
-					//too many tries
 					return;
 			}
 		}
@@ -159,6 +161,38 @@ public class Client
 	
 	private void move()
 	{
+		AI ai = new AI();
+		AIOutModel model = ai.move(board, found, treasure, treasuresToGo);
 		
+		byteOutStream = new ByteArrayOutputStream();
+		
+		out_message = objectFactory.createMazeCom();
+		out_message.setMcType(MazeComType.MOVE);
+
+		MoveMessageType moveType = new MoveMessageType();
+		
+		PositionType playerPosition = new PositionType();
+		playerPosition.setCol(model.player_column);
+		playerPosition.setRow(model.player_row);
+		
+		PositionType cardPosition = new PositionType();
+		cardPosition.setCol(model.card_column);
+		cardPosition.setRow(model.card_row);
+		
+		moveType.setNewPinPos(playerPosition);
+		moveType.setShiftPosition(cardPosition);
+		moveType.setShiftCard(model.shiftCard);
+
+		out_message.setMoveMessage(moveType);
+		try 
+		{
+			marshaller.marshal(out_message, byteOutStream);
+			out_string = new String(byteOutStream.toByteArray());
+			utfOutputStream.writeUTF8(out_string);
+		}
+		catch (Exception e) 
+		{
+			e.printStackTrace();
+		}
 	}
 }
