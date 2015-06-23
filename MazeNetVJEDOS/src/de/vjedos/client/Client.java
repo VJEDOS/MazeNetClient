@@ -162,7 +162,7 @@ public class Client
 	private void move()
 	{
 		AI ai = new AI();
-		AIOutModel model = ai.move(board, found, treasure, treasuresToGo);
+		AIOutModel model = ai.move(board, found, treasure, treasuresToGo, id);
 		
 		byteOutStream = new ByteArrayOutputStream();
 		

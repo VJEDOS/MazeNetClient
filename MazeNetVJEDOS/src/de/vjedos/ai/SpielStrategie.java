@@ -38,8 +38,8 @@ public class SpielStrategie {
 		for(int i = 0; i < 7; i++){
 			System.arraycopy(copy.brett[i], 0, brett[i], 0, 7);
 		}
-////		copy.schaetze.stream().forEach((t) -> {
-////				schaetze.add(t);
+//		copy.schaetze.stream().forEach((t) -> {
+//				schaetze.add(t);
 //		});
 		this.freieKachel = copy.freieKachel;
 		this.schatz = copy.schatz;
@@ -52,6 +52,12 @@ public class SpielStrategie {
 		this.geblockteSpalte = copy.geblockteSpalte;
 		this.geblockteZeile = copy.geblockteZeile;
 		
+	}
+	
+	public SpielStrategie(Kachel[][] brett, Spieler spieler)
+	{
+		this.brett=brett;
+		this.spieler = spieler;
 	}
 	
 	public boolean pruefeZugGueltigkeit(int index, int dir) {
